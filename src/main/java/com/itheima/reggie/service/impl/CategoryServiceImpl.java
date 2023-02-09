@@ -6,7 +6,7 @@ import com.itheima.reggie.common.CustomException;
 import com.itheima.reggie.entity.Category;
 import com.itheima.reggie.entity.Dish;
 import com.itheima.reggie.entity.Setmeal;
-import com.itheima.reggie.mapper.CategoryMpper;
+import com.itheima.reggie.mapper.CategoryMapper;
 import com.itheima.reggie.service.CategoryService;
 import com.itheima.reggie.service.DishService;
 import com.itheima.reggie.service.SetmealService;
@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class CategoryServiceImpl extends ServiceImpl<CategoryMpper, Category> implements CategoryService {
+public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements CategoryService {
     @Autowired
     private DishService dishService;
     @Autowired
