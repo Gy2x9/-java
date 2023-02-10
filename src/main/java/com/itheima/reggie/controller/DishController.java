@@ -17,9 +17,12 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,7 +35,8 @@ public class DishController {
     private DishFlavorService dishFlavorService;
     @Autowired
     private CategoryService categoryService;
-
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     /**
      * 新增菜品
@@ -110,7 +114,12 @@ public class DishController {
         log.info(dishDto.toString());
 
         dishService.updateWithFlavor(dishDto);
-
+//        清理所有菜品的缓存数据
+//        Set keys = redisTemplate.keys("dish_*");
+//        redisTemplate.delete(keys);
+//        只是清理某个分类下面的菜品缓存数据
+        String key ="dish_"+dishDto.getCategoryId()+"_1";
+        redisTemplate.delete(key);
         return R.success("新增菜品成功");
     }
 
@@ -118,6 +127,16 @@ public class DishController {
 @GetMapping("/list")
 //注意get方法
 public R<List<DishDto>> list(Dish dish){
+    List<DishDto> dishDtoList =null;
+//        先从redis中获取缓存数据
+    String key ="dish_"+dish.getCategoryId()+"_"+dish.getStatus();
+
+    dishDtoList  = (List<DishDto>) redisTemplate.opsForValue().get(key);
+//    如果存在直接返回无需查询数据库
+    if (dishDtoList!=null){
+        return R.success(dishDtoList);
+    }
+
 //        构造查询条件
     LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
     queryWrapper.eq(dish.getCategoryId()!=null,Dish::getCategoryId,dish.getCategoryId());
@@ -127,7 +146,7 @@ public R<List<DishDto>> list(Dish dish){
 //    添加排序条件
     queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
     List<Dish> list =dishService.list(queryWrapper);
-    List<DishDto> dishDtoList = list.stream().map((item)->{
+         dishDtoList = list.stream().map((item)->{
         DishDto dishDto = new DishDto();
 //            将dish中有的属性拷贝给dto
         BeanUtils.copyProperties(item,dishDto);
@@ -146,6 +165,8 @@ public R<List<DishDto>> list(Dish dish){
 
         return dishDto;
     }).collect(Collectors.toList());
+//    如果不存在，需要查询数据库，将查询的数据缓存到redis
+    redisTemplate.opsForValue().set(key,dishDtoList,60, TimeUnit.MINUTES);
 
 
     return R.success(dishDtoList);
