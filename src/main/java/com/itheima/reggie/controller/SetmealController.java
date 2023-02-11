@@ -14,6 +14,8 @@ import com.itheima.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,6 +41,7 @@ public class SetmealController {
      */
 
     @PostMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R<String> save(@RequestBody SetmealDto setmealDto){
     log.info("套餐信息：{}",setmealDto);
     setmealService.saveWithDish(setmealDto);
@@ -98,6 +101,7 @@ public class SetmealController {
     }
 //删除套餐
     @DeleteMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)//注意套餐数据是作为R<List<Setmeal>>整体缓存的，所以只要有增删改就得全部删除
 public R<String> delete(@RequestParam List<Long> ids){
        log.info("ids:{}",ids);
        setmealService.removeWithDish(ids);
@@ -109,6 +113,7 @@ public R<String> delete(@RequestParam List<Long> ids){
      * @return
      */
     @GetMapping("/list")
+    @Cacheable(value ="setmealCache",key ="#setmeal.categoryId+ '_' + #setmeal.status " )
     //注意这里传过来的不是json数据 所以不用加requestbody 这里和传参方式有关系
     public R<List<Setmeal>> list(Setmeal setmeal){
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
